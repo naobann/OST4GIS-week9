@@ -49,8 +49,7 @@ Task 1: Use Mapbox's 'Search' API to 'geocode' information from your input
 
 The docs: https://www.mapbox.com/api-documentation/#geocoding
 (For this first task, the URL pattern you'll want to produce looks like this:
-`https://api.mapbox.com/geocoding/v5/mapbox.places/{geocode_this}.json?access_token={your_mapbox_token}`)
-
+`https://api.mapbox.com/geocoding/v5/mapbox.places/{geocode_this}.json?access_token={your_mapbox_token}`))
 You might note that this task is slightly underspecified: there are multiple different
 ways to transform text into an address. For the lab, the simplest form of geocoding
 (i.e. without any further options being specified) is entirely appropriate. More complex
@@ -128,6 +127,8 @@ var state = {
 /* We'll use underscore's `once` function to make sure this only happens
  *  one time even if weupdate the position later
  */
+
+var origin = {"lat":0,"lng":0};
 var goToOrigin = _.once(function(lat, lng) {
   map.flyTo([lat, lng], 14);
 });
@@ -149,6 +150,9 @@ $(document).ready(function() {
   if ("geolocation" in navigator) {
     navigator.geolocation.getCurrentPosition(function(position) {
       updatePosition(position.coords.latitude, position.coords.longitude, position.timestamp);
+      origin.lat = position.coords.latitude;
+      origin.lng = position.coords.longitude;
+      console.log(origin);
     });
   } else {
     alert("Unable to access geolocation API!");
@@ -170,8 +174,28 @@ $(document).ready(function() {
   $("#calculate").click(function(e) {
     var dest = $('#dest').val();
     console.log(dest);
+    var myToken = "pk.eyJ1IjoicnVvY2hhbmciLCJhIjoiY2plMGN5NmduNTBzMzJ3cXA4OHJqbTg1MCJ9.hVntg2f96UxD239bHHlQFw";
+    var url = "https://api.mapbox.com/geocoding/v5/mapbox.places/" +dest +".json?access_token="+myToken;
+    $.ajax(url).done(function(destination){
+      _.map(destination.features, function(point){
+  var dest_lng = point.geometry.coordinates [0];
+  var dest_lat = point.geometry.coordinates [1];
+  var destMarker = L.circleMarker([dest_lat,dest_lng],{color:"red"}).addTo(map);
+  var route = 'https://api.mapbox.com/directions/v5/mapbox/driving/' + origin.lng + ',' + origin.lat + ';' + dest_lon + ',' + dest_lat + '?geometries=polyline&access_token='+myToken;
+  $.ajax(route).done(function(routes){
+    var routePoints = decode(routes.routes[0].geometry);
+    var revisedPoints = _.map(routePoints,function(point){
+            return [point[1],point[0]];
+          });
+    var route = turf.lineString(revisedPoints);
+    console.log(route);
+    var myStyle = {
+      "color": "blue",
+      "weight": 2,
+    };
+    L.geoJson(line, {style:myStyle}).addTo(map);
   });
-
 });
-
-
+});
+});
+});
